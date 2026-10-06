@@ -1,4 +1,4 @@
-# Lunor App Dev prototype - v1.2: Understand -> Plan -> Build -> Explain -> Learn
+# Lunor App Dev prototype : Understand -> Plan -> Build -> Explain -> Learn
 
 Idea -> 3 idea-specific questions -> a plan with two decisions -> a small generated app in a phone frame ->
 Explain mode (click anything to see the real code, the concept and one thing to try changing) -> "What you learned".
