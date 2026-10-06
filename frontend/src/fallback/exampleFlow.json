@@ -1,0 +1,43 @@
+{
+  "plan": {
+    "idea": "An expense tracker for students",
+    "app_name": "Campus Cash",
+    "understanding": "You want a quick way for students to log what they spend and see where their money goes. It should be fast to use between classes, with nothing to sign up for.",
+    "summary": "A small expense tracker that totals spending and filters it by category.",
+    "target_user": "College students managing a monthly budget",
+    "mvp_features": [
+      "Add an expense with amount and category",
+      "See the running total",
+      "Filter expenses by category",
+      "Delete an expense"
+    ],
+    "later_features": [
+      "Monthly budget with alerts",
+      "Charts by category",
+      "Sync across devices",
+      "Split bills with roommates"
+    ],
+    "decisions": [
+      {
+        "key": "navigation",
+        "title": "How should people move around?",
+        "context": "Students log expenses in a hurry, so every extra tap costs something.",
+        "recommended": "single",
+        "options": [
+          { "value": "single", "label": "Single screen", "benefit": "Add, filter and review spending without leaving the page.", "cost": "The screen gets crowded as features grow." },
+          { "value": "tabs", "label": "Two tabs", "benefit": "Adding and reviewing each get their own clean space.", "cost": "One extra tap before every review." }
+        ]
+      },
+      {
+        "key": "layout",
+        "title": "How should items be shown?",
+        "context": "An expense is mostly an amount and a category, which is little to show per item.",
+        "recommended": "list",
+        "options": [
+          { "value": "list", "label": "List", "benefit": "Many expenses fit on screen, so you can scan the whole month quickly.", "cost": "Rows look plain and carry little visual personality." },
+          { "value": "cards", "label": "Cards", "benefit": "Each expense stands out with room for a category colour.", "cost": "Far fewer expenses are visible at once." }
+        ]
+      }
+    ]
+  }
+}

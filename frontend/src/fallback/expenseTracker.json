@@ -1,0 +1,140 @@
+{
+  "title": "Campus Cash",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Campus Cash</title>\n<style>\n  :root { --ink:#1c2733; --muted:#6c7a89; --bg:#eef3f1; --card:#ffffff; --accent:#0f7b5f; --accent-soft:#d9f0e8; --line:#dde5e2; --danger:#b4412f; }\n  * { box-sizing: border-box; }\n  html, body { height: 100%; }\n  body { margin: 0; font-family: system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; background: var(--bg); color: var(--ink); }\n  .app { height: 100%; display: flex; flex-direction: column; gap: 12px; padding: 18px 16px 0; }\n  h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }\n  .total { background: var(--ink); color: #fff; border-radius: 16px; padding: 14px 16px; }\n  .total small { display: block; font-size: 12px; opacity: .7; }\n  .total strong { font-size: 30px; letter-spacing: -0.02em; }\n  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }\n  .form input, .form select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font-size: 14px; }\n  .form .wide { grid-column: 1 / -1; }\n  .form input.invalid { border-color: var(--danger); }\n  #add-btn { grid-column: 1 / -1; padding: 11px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }\n  #add-btn:active { transform: scale(.98); }\n  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }\n  .chip { flex: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); font-size: 13px; cursor: pointer; }\n  .chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }\n  ul { display: flex; flex: 1; flex-direction: column; gap: 8px; margin: 0; padding: 0 0 16px; overflow-y: auto; list-style: none; }\n  li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }\n  li .meta { flex: 1; min-width: 0; }\n  li .name { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }\n  li .cat { font-size: 12px; color: var(--muted); }\n  li .amt { font-weight: 700; }\n  li button { padding: 4px 6px; border: 0; background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }\n  .empty { padding: 24px 0; text-align: center; font-size: 14px; color: var(--muted); }\n</style>\n</head>\n<body>\n<div class=\"app\">\n  <h1>Campus Cash</h1>\n\n  <!-- @explain:total-card -->\n  <section class=\"total\" data-explain=\"total-card\">\n    <small>Spent this month</small>\n    <strong id=\"total\">$0.00</strong>\n  </section>\n  <!-- @end:total-card -->\n\n  <div class=\"form\">\n    <input class=\"wide\" id=\"title\" placeholder=\"What was it for?\">\n    <input id=\"amount\" type=\"number\" min=\"0\" step=\"0.01\" placeholder=\"Amount\" data-explain=\"amount-input\">\n    <select id=\"category\" data-explain=\"category-select\"></select>\n    <button id=\"add-btn\" data-explain=\"add-button\">Add expense</button>\n  </div>\n\n  <div class=\"chips\" id=\"chips\" data-explain=\"filter-chips\"></div>\n  <ul id=\"list\" data-explain=\"expense-list\"></ul>\n</div>\n\n<script>\n  const CATEGORIES = [\"Food\", \"Transport\", \"Books\", \"Fun\"];\n\n  // All the data the app knows about lives in this one object.\n  const state = {\n    filter: \"All\",\n    expenses: [\n      { id: 1, title: \"Canteen lunch\", amount: 4.5, category: \"Food\" },\n      { id: 2, title: \"Metro top-up\", amount: 12, category: \"Transport\" },\n      { id: 3, title: \"Used textbook\", amount: 18.75, category: \"Books\" },\n    ],\n  };\n\n  const totalEl = document.getElementById(\"total\");\n  const titleInput = document.getElementById(\"title\");\n  const amountInput = document.getElementById(\"amount\");\n  const categorySelect = document.getElementById(\"category\");\n  const addBtn = document.getElementById(\"add-btn\");\n  const chipsEl = document.getElementById(\"chips\");\n  const listEl = document.getElementById(\"list\");\n\n  // Escape text before putting it into HTML so typed characters can't break the page.\n  function esc(text) {\n    return String(text).replace(/[&<>\"']/g, (ch) => \"&#\" + ch.charCodeAt(0) + \";\");\n  }\n\n  // @explain:category-select\n  // Build the dropdown options from the CATEGORIES array\n  categorySelect.innerHTML = CATEGORIES\n    .map((name) => `<option value=\"${name}\">${name}</option>`)\n    .join(\"\");\n  // @end:category-select\n\n  // @explain:amount-input\n  // Returns a positive number, or null if the field is empty or invalid\n  function readAmount() {\n    const value = parseFloat(amountInput.value);\n    return Number.isFinite(value) && value > 0 ? value : null;\n  }\n  // @end:amount-input\n\n  // @explain:total-card\n  function totalSpent() {\n    return state.expenses.reduce((sum, e) => sum + e.amount, 0);\n  }\n\n  function renderTotal() {\n    totalEl.textContent = \"$\" + totalSpent().toFixed(2);\n  }\n  // @end:total-card\n\n  // @explain:filter-chips\n  // Only the expenses that match the selected chip\n  function visibleExpenses() {\n    if (state.filter === \"All\") return state.expenses;\n    return state.expenses.filter((e) => e.category === state.filter);\n  }\n\n  // One listener on the container; closest() finds which chip was clicked\n  chipsEl.addEventListener(\"click\", (event) => {\n    const chip = event.target.closest(\"[data-filter]\");\n    if (!chip) return;\n    state.filter = chip.dataset.filter;\n    render();\n  });\n  // @end:filter-chips\n\n  function renderChips() {\n    chipsEl.innerHTML = [\"All\", ...CATEGORIES]\n      .map((c) => `<button class=\"chip ${c === state.filter ? \"active\" : \"\"}\" data-filter=\"${c}\">${c}</button>`)\n      .join(\"\");\n  }\n\n  // @explain:expense-list\n  function renderList() {\n    const items = visibleExpenses();\n    if (items.length === 0) {\n      listEl.innerHTML = `<div class=\"empty\">No expenses here yet.</div>`;\n      return;\n    }\n    listEl.innerHTML = items\n      .map((e) => `\n        <li>\n          <div class=\"meta\"><div class=\"name\">${esc(e.title)}</div><div class=\"cat\">${e.category}</div></div>\n          <span class=\"amt\">$${e.amount.toFixed(2)}</span>\n          <button data-delete=\"${e.id}\" data-explain=\"delete-button\" aria-label=\"Delete\">✕</button>\n        </li>`)\n      .join(\"\");\n  }\n  // @end:expense-list\n\n  // @explain:add-button\n  addBtn.addEventListener(\"click\", () => {\n    const amount = readAmount();\n    amountInput.classList.toggle(\"invalid\", amount === null);\n    if (amount === null) return;\n\n    const category = categorySelect.value;\n    state.expenses = [\n      { id: Date.now(), title: titleInput.value.trim() || category, amount, category },\n      ...state.expenses,\n    ];\n    state.filter = \"All\"; // make sure the new expense is visible\n    titleInput.value = \"\";\n    amountInput.value = \"\";\n    render();\n  });\n  // @end:add-button\n\n  // @explain:delete-button\n  // One listener on the whole list handles every delete button, even ones added later\n  listEl.addEventListener(\"click\", (event) => {\n    const btn = event.target.closest(\"[data-delete]\");\n    if (!btn) return;\n    const id = Number(btn.dataset.delete);\n    state.expenses = state.expenses.filter((e) => e.id !== id);\n    render();\n  });\n  // @end:delete-button\n\n  // Redraw the whole screen from the current state\n  function render() {\n    renderTotal();\n    renderChips();\n    renderList();\n  }\n\n  render();\n</script>\n</body>\n</html>\n",
+  "ids": [
+    "total-card",
+    "amount-input",
+    "category-select",
+    "add-button",
+    "filter-chips",
+    "expense-list",
+    "delete-button"
+  ],
+  "explanations": [
+    {
+      "id": "total-card",
+      "title": "Total card",
+      "what_it_does": "Shows how much has been spent in total. It updates every time an expense is added or deleted.",
+      "how_it_works": "`totalSpent()` walks through `state.expenses` and adds up every `amount` using `reduce`. `renderTotal()` then formats that number with `toFixed(2)` and writes it into the `<strong id=\"total\">` element.",
+      "concept": "Derived state",
+      "concept_note": "The total isn't stored anywhere. It is calculated from the list each time, so it can never get out of sync with the data.",
+      "try_changing": "Change `.toFixed(2)` to `.toFixed(0)` in `renderTotal()` and the total will round to whole dollars.",
+      "snippets": [
+        {
+          "language": "html",
+          "code": "<section class=\"total\" data-explain=\"total-card\">\n  <small>Spent this month</small>\n  <strong id=\"total\">$0.00</strong>\n</section>",
+          "start_line": 41,
+          "end_line": 44
+        },
+        {
+          "language": "js",
+          "code": "function totalSpent() {\n  return state.expenses.reduce((sum, e) => sum + e.amount, 0);\n}\n\nfunction renderTotal() {\n  totalEl.textContent = \"$\" + totalSpent().toFixed(2);\n}",
+          "start_line": 100,
+          "end_line": 106
+        }
+      ]
+    },
+    {
+      "id": "amount-input",
+      "title": "Amount field",
+      "what_it_does": "Where you type how much you spent. Anything that isn't a positive number gets a red border when you press Add.",
+      "how_it_works": "`readAmount()` reads the field with `parseFloat`, then returns the number only if `Number.isFinite(value) && value > 0`. Otherwise it returns `null`, which the Add button treats as invalid input.",
+      "concept": "Input validation",
+      "concept_note": "Never trust what a user typed. Check it before it goes into your data.",
+      "try_changing": "Change `value > 0` to `value >= 0`, then try adding an expense of 0 to see it accepted.",
+      "snippets": [
+        {
+          "language": "js",
+          "code": "// Returns a positive number, or null if the field is empty or invalid\nfunction readAmount() {\n  const value = parseFloat(amountInput.value);\n  return Number.isFinite(value) && value > 0 ? value : null;\n}",
+          "start_line": 92,
+          "end_line": 96
+        }
+      ]
+    },
+    {
+      "id": "category-select",
+      "title": "Category dropdown",
+      "what_it_does": "Lets you pick which category a new expense belongs to.",
+      "how_it_works": "The `<select>` starts empty. This code loops over the `CATEGORIES` array with `map`, turns each name into an `<option>` string, joins them together and assigns the result to `innerHTML`.",
+      "concept": "Generating UI from data",
+      "concept_note": "Keep the data in one array and let code build the HTML from it. Change the array and the interface follows.",
+      "try_changing": "Add `\"Coffee\"` to the `CATEGORIES` array at the top of the script. A new dropdown option and a new filter chip appear.",
+      "snippets": [
+        {
+          "language": "js",
+          "code": "// Build the dropdown options from the CATEGORIES array\ncategorySelect.innerHTML = CATEGORIES\n  .map((name) => `<option value=\"${name}\">${name}</option>`)\n  .join(\"\");",
+          "start_line": 85,
+          "end_line": 88
+        }
+      ]
+    },
+    {
+      "id": "add-button",
+      "title": "Add expense button",
+      "what_it_does": "Adds the expense you typed to the top of the list and clears the form.",
+      "how_it_works": "The click handler calls `readAmount()`. If it returns `null` it marks the field invalid and stops. Otherwise it builds a new expense object, creates a new array with it at the front (`[newItem, ...state.expenses]`), clears the inputs and calls `render()` to redraw the screen.",
+      "concept": "Event handling and state updates",
+      "concept_note": "A user action changes the data first, then the screen is redrawn from that data. The interface never edits itself directly.",
+      "try_changing": "Rewrite the array as `[...state.expenses, { ... }]`, with the spread first, so new expenses land at the bottom of the list.",
+      "snippets": [
+        {
+          "language": "js",
+          "code": "addBtn.addEventListener(\"click\", () => {\n  const amount = readAmount();\n  amountInput.classList.toggle(\"invalid\", amount === null);\n  if (amount === null) return;\n\n  const category = categorySelect.value;\n  state.expenses = [\n    { id: Date.now(), title: titleInput.value.trim() || category, amount, category },\n    ...state.expenses,\n  ];\n  state.filter = \"All\"; // make sure the new expense is visible\n  titleInput.value = \"\";\n  amountInput.value = \"\";\n  render();\n});",
+          "start_line": 150,
+          "end_line": 164
+        }
+      ]
+    },
+    {
+      "id": "filter-chips",
+      "title": "Category filter chips",
+      "what_it_does": "A row of buttons that narrows the list down to one category.",
+      "how_it_works": "Clicking a chip stores its category in `state.filter` and calls `render()`. `visibleExpenses()` then uses `filter` to keep only the expenses whose `category` matches. The listener sits on the container and uses `closest('[data-filter]')` to find which chip was clicked.",
+      "concept": "Array filtering",
+      "concept_note": "`filter` returns a new array containing only the items that pass a test, and leaves the original untouched.",
+      "try_changing": "In `visibleExpenses()`, change `e.category === state.filter` to `e.category !== state.filter`. Each chip will now show everything except its own category.",
+      "snippets": [
+        {
+          "language": "js",
+          "code": "// Only the expenses that match the selected chip\nfunction visibleExpenses() {\n  if (state.filter === \"All\") return state.expenses;\n  return state.expenses.filter((e) => e.category === state.filter);\n}\n\n// One listener on the container; closest() finds which chip was clicked\nchipsEl.addEventListener(\"click\", (event) => {\n  const chip = event.target.closest(\"[data-filter]\");\n  if (!chip) return;\n  state.filter = chip.dataset.filter;\n  render();\n});",
+          "start_line": 110,
+          "end_line": 122
+        }
+      ]
+    },
+    {
+      "id": "expense-list",
+      "title": "Expense list",
+      "what_it_does": "The scrolling list of expenses, or a short message when there is nothing to show.",
+      "how_it_works": "`renderList()` takes the visible expenses, turns each one into an `<li>` with a template string using `map`, joins them into one string and sets `listEl.innerHTML`. If the array is empty it shows the empty message instead.",
+      "concept": "Rendering lists from data",
+      "concept_note": "The screen is a function of the data: whatever is in the array is what gets drawn, so you never add or remove list items by hand.",
+      "try_changing": "Swap the `.name` and `.cat` text inside the `<li>` template. Every row flips at once, because they all come from the same template.",
+      "snippets": [
+        {
+          "language": "js",
+          "code": "function renderList() {\n  const items = visibleExpenses();\n  if (items.length === 0) {\n    listEl.innerHTML = `<div class=\"empty\">No expenses here yet.</div>`;\n    return;\n  }\n  listEl.innerHTML = items\n    .map((e) => `\n      <li>\n        <div class=\"meta\"><div class=\"name\">${esc(e.title)}</div><div class=\"cat\">${e.category}</div></div>\n        <span class=\"amt\">$${e.amount.toFixed(2)}</span>\n        <button data-delete=\"${e.id}\" data-explain=\"delete-button\" aria-label=\"Delete\">✕</button>\n      </li>`)\n    .join(\"\");\n}",
+          "start_line": 132,
+          "end_line": 146
+        }
+      ]
+    },
+    {
+      "id": "delete-button",
+      "title": "Delete button",
+      "what_it_does": "Removes that one expense from the list.",
+      "how_it_works": "Instead of attaching a listener to every ✕ button, one listener on the whole list catches every click. `closest('[data-delete]')` finds which button was pressed, its `data-delete` value is the expense id, and `filter` builds a new array without that item before `render()` redraws.",
+      "concept": "Event delegation",
+      "concept_note": "Attach one listener to a parent and let clicks bubble up to it. It keeps working for buttons that are created later.",
+      "try_changing": "Change `e.id !== id` to `e.id === id`. Deleting an expense will now remove everything except the one you clicked.",
+      "snippets": [
+        {
+          "language": "js",
+          "code": "// One listener on the whole list handles every delete button, even ones added later\nlistEl.addEventListener(\"click\", (event) => {\n  const btn = event.target.closest(\"[data-delete]\");\n  if (!btn) return;\n  const id = Number(btn.dataset.delete);\n  state.expenses = state.expenses.filter((e) => e.id !== id);\n  render();\n});",
+          "start_line": 168,
+          "end_line": 175
+        }
+      ]
+    }
+  ]
+}

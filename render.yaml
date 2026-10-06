@@ -1,0 +1,12 @@
+# Render "Blueprint": New + > Blueprint > pick this repo. You only need to paste GEMINI_API_KEY when asked.
+services:
+  - type: web
+    name: lunor-app-dev
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false          # you type it in the Render dashboard; it is never stored in the repo
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash

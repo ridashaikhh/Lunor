@@ -1,0 +1,68 @@
+{
+  "title": "Campus Cash",
+  "items": [
+    {
+      "id": "total-card",
+      "title": "Total card",
+      "what_it_does": "Shows how much has been spent in total. It updates every time an expense is added or deleted.",
+      "how_it_works": "`totalSpent()` walks through `state.expenses` and adds up every `amount` using `reduce`. `renderTotal()` then formats that number with `toFixed(2)` and writes it into the `<strong id=\"total\">` element.",
+      "concept": "Derived state",
+      "concept_note": "The total isn't stored anywhere. It is calculated from the list each time, so it can never get out of sync with the data.",
+      "try_changing": "Change `.toFixed(2)` to `.toFixed(0)` in `renderTotal()` and the total will round to whole dollars."
+    },
+    {
+      "id": "amount-input",
+      "title": "Amount field",
+      "what_it_does": "Where you type how much you spent. Anything that isn't a positive number gets a red border when you press Add.",
+      "how_it_works": "`readAmount()` reads the field with `parseFloat`, then returns the number only if `Number.isFinite(value) && value > 0`. Otherwise it returns `null`, which the Add button treats as invalid input.",
+      "concept": "Input validation",
+      "concept_note": "Never trust what a user typed. Check it before it goes into your data.",
+      "try_changing": "Change `value > 0` to `value >= 0`, then try adding an expense of 0 to see it accepted."
+    },
+    {
+      "id": "category-select",
+      "title": "Category dropdown",
+      "what_it_does": "Lets you pick which category a new expense belongs to.",
+      "how_it_works": "The `<select>` starts empty. This code loops over the `CATEGORIES` array with `map`, turns each name into an `<option>` string, joins them together and assigns the result to `innerHTML`.",
+      "concept": "Generating UI from data",
+      "concept_note": "Keep the data in one array and let code build the HTML from it. Change the array and the interface follows.",
+      "try_changing": "Add `\"Coffee\"` to the `CATEGORIES` array at the top of the script. A new dropdown option and a new filter chip appear."
+    },
+    {
+      "id": "add-button",
+      "title": "Add expense button",
+      "what_it_does": "Adds the expense you typed to the top of the list and clears the form.",
+      "how_it_works": "The click handler calls `readAmount()`. If it returns `null` it marks the field invalid and stops. Otherwise it builds a new expense object, creates a new array with it at the front (`[newItem, ...state.expenses]`), clears the inputs and calls `render()` to redraw the screen.",
+      "concept": "Event handling and state updates",
+      "concept_note": "A user action changes the data first, then the screen is redrawn from that data. The interface never edits itself directly.",
+      "try_changing": "Rewrite the array as `[...state.expenses, { ... }]`, with the spread first, so new expenses land at the bottom of the list."
+    },
+    {
+      "id": "filter-chips",
+      "title": "Category filter chips",
+      "what_it_does": "A row of buttons that narrows the list down to one category.",
+      "how_it_works": "Clicking a chip stores its category in `state.filter` and calls `render()`. `visibleExpenses()` then uses `filter` to keep only the expenses whose `category` matches. The listener sits on the container and uses `closest('[data-filter]')` to find which chip was clicked.",
+      "concept": "Array filtering",
+      "concept_note": "`filter` returns a new array containing only the items that pass a test, and leaves the original untouched.",
+      "try_changing": "In `visibleExpenses()`, change `e.category === state.filter` to `e.category !== state.filter`. Each chip will now show everything except its own category."
+    },
+    {
+      "id": "expense-list",
+      "title": "Expense list",
+      "what_it_does": "The scrolling list of expenses, or a short message when there is nothing to show.",
+      "how_it_works": "`renderList()` takes the visible expenses, turns each one into an `<li>` with a template string using `map`, joins them into one string and sets `listEl.innerHTML`. If the array is empty it shows the empty message instead.",
+      "concept": "Rendering lists from data",
+      "concept_note": "The screen is a function of the data: whatever is in the array is what gets drawn, so you never add or remove list items by hand.",
+      "try_changing": "Swap the `.name` and `.cat` text inside the `<li>` template. Every row flips at once, because they all come from the same template."
+    },
+    {
+      "id": "delete-button",
+      "title": "Delete button",
+      "what_it_does": "Removes that one expense from the list.",
+      "how_it_works": "Instead of attaching a listener to every ✕ button, one listener on the whole list catches every click. `closest('[data-delete]')` finds which button was pressed, its `data-delete` value is the expense id, and `filter` builds a new array without that item before `render()` redraws.",
+      "concept": "Event delegation",
+      "concept_note": "Attach one listener to a parent and let clicks bubble up to it. It keeps working for buttons that are created later.",
+      "try_changing": "Change `e.id !== id` to `e.id === id`. Deleting an expense will now remove everything except the one you clicked."
+    }
+  ]
+}

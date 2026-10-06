@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Cash</title>
+<style>
+  :root { --ink:#1c2733; --muted:#6c7a89; --bg:#eef3f1; --card:#ffffff; --accent:#0f7b5f; --accent-soft:#d9f0e8; --line:#dde5e2; --danger:#b4412f; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  .app { height: 100%; display: flex; flex-direction: column; gap: 12px; padding: 18px 16px 0; }
+  h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+  .total { background: var(--ink); color: #fff; border-radius: 16px; padding: 14px 16px; }
+  .total small { display: block; font-size: 12px; opacity: .7; }
+  .total strong { font-size: 30px; letter-spacing: -0.02em; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form input, .form select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font-size: 14px; }
+  .form .wide { grid-column: 1 / -1; }
+  .form input.invalid { border-color: var(--danger); }
+  #add-btn { grid-column: 1 / -1; padding: 11px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; }
+  #add-btn:active { transform: scale(.98); }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .chip { flex: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); font-size: 13px; cursor: pointer; }
+  .chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  ul { display: flex; flex: 1; flex-direction: column; gap: 8px; margin: 0; padding: 0 0 16px; overflow-y: auto; list-style: none; }
+  li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  li .meta { flex: 1; min-width: 0; }
+  li .name { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  li .cat { font-size: 12px; color: var(--muted); }
+  li .amt { font-weight: 700; }
+  li button { padding: 4px 6px; border: 0; background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; }
+  .empty { padding: 24px 0; text-align: center; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Campus Cash</h1>
+
+  <!-- @explain:total-card -->
+  <section class="total" data-explain="total-card">
+    <small>Spent this month</small>
+    <strong id="total">$0.00</strong>
+  </section>
+  <!-- @end:total-card -->
+
+  <div class="form">
+    <input class="wide" id="title" placeholder="What was it for?">
+    <input id="amount" type="number" min="0" step="0.01" placeholder="Amount" data-explain="amount-input">
+    <select id="category" data-explain="category-select"></select>
+    <button id="add-btn" data-explain="add-button">Add expense</button>
+  </div>
+
+  <div class="chips" id="chips" data-explain="filter-chips"></div>
+  <ul id="list" data-explain="expense-list"></ul>
+</div>
+
+<script>
+  const CATEGORIES = ["Food", "Transport", "Books", "Fun"];
+
+  // All the data the app knows about lives in this one object.
+  const state = {
+    filter: "All",
+    expenses: [
+      { id: 1, title: "Canteen lunch", amount: 4.5, category: "Food" },
+      { id: 2, title: "Metro top-up", amount: 12, category: "Transport" },
+      { id: 3, title: "Used textbook", amount: 18.75, category: "Books" },
+    ],
+  };
+
+  const totalEl = document.getElementById("total");
+  const titleInput = document.getElementById("title");
+  const amountInput = document.getElementById("amount");
+  const categorySelect = document.getElementById("category");
+  const addBtn = document.getElementById("add-btn");
+  const chipsEl = document.getElementById("chips");
+  const listEl = document.getElementById("list");
+
+  // Escape text before putting it into HTML so typed characters can't break the page.
+  function esc(text) {
+    return String(text).replace(/[&<>"']/g, (ch) => "&#" + ch.charCodeAt(0) + ";");
+  }
+
+  // @explain:category-select
+  // Build the dropdown options from the CATEGORIES array
+  categorySelect.innerHTML = CATEGORIES
+    .map((name) => `<option value="${name}">${name}</option>`)
+    .join("");
+  // @end:category-select
+
+  // @explain:amount-input
+  // Returns a positive number, or null if the field is empty or invalid
+  function readAmount() {
+    const value = parseFloat(amountInput.value);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+  // @end:amount-input
+
+  // @explain:total-card
+  function totalSpent() {
+    return state.expenses.reduce((sum, e) => sum + e.amount, 0);
+  }
+
+  function renderTotal() {
+    totalEl.textContent = "$" + totalSpent().toFixed(2);
+  }
+  // @end:total-card
+
+  // @explain:filter-chips
+  // Only the expenses that match the selected chip
+  function visibleExpenses() {
+    if (state.filter === "All") return state.expenses;
+    return state.expenses.filter((e) => e.category === state.filter);
+  }
+
+  // One listener on the container; closest() finds which chip was clicked
+  chipsEl.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-filter]");
+    if (!chip) return;
+    state.filter = chip.dataset.filter;
+    render();
+  });
+  // @end:filter-chips
+
+  function renderChips() {
+    chipsEl.innerHTML = ["All", ...CATEGORIES]
+      .map((c) => `<button class="chip ${c === state.filter ? "active" : ""}" data-filter="${c}">${c}</button>`)
+      .join("");
+  }
+
+  // @explain:expense-list
+  function renderList() {
+    const items = visibleExpenses();
+    if (items.length === 0) {
+      listEl.innerHTML = `<div class="empty">No expenses here yet.</div>`;
+      return;
+    }
+    listEl.innerHTML = items
+      .map((e) => `
+        <li>
+          <div class="meta"><div class="name">${esc(e.title)}</div><div class="cat">${e.category}</div></div>
+          <span class="amt">$${e.amount.toFixed(2)}</span>
+          <button data-delete="${e.id}" data-explain="delete-button" aria-label="Delete">✕</button>
+        </li>`)
+      .join("");
+  }
+  // @end:expense-list
+
+  // @explain:add-button
+  addBtn.addEventListener("click", () => {
+    const amount = readAmount();
+    amountInput.classList.toggle("invalid", amount === null);
+    if (amount === null) return;
+
+    const category = categorySelect.value;
+    state.expenses = [
+      { id: Date.now(), title: titleInput.value.trim() || category, amount, category },
+      ...state.expenses,
+    ];
+    state.filter = "All"; // make sure the new expense is visible
+    titleInput.value = "";
+    amountInput.value = "";
+    render();
+  });
+  // @end:add-button
+
+  // @explain:delete-button
+  // One listener on the whole list handles every delete button, even ones added later
+  listEl.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-delete]");
+    if (!btn) return;
+    const id = Number(btn.dataset.delete);
+    state.expenses = state.expenses.filter((e) => e.id !== id);
+    render();
+  });
+  // @end:delete-button
+
+  // Redraw the whole screen from the current state
+  function render() {
+    renderTotal();
+    renderChips();
+    renderList();
+  }
+
+  render();
+</script>
+</body>
+</html>
